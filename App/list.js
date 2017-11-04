@@ -38,6 +38,7 @@ class Item extends Component {
         super(props)
         this.state = {
             status: this.props.item.status,
+
             likeCount: this.props.item.like_count,
         }
     }
@@ -61,7 +62,7 @@ class Item extends Component {
     }
 
     _onPressDetail() {
-        this.props.navigation("Detail",{'postsId': this.props.item.id})
+        this.props.navigation("Detail", {'postsId': this.props.item.id})
     }
 
     _onPressLike(item, userId) {
@@ -107,7 +108,9 @@ class List extends Component {
         this.state = {
             list: [],
             status: null,
-            userid: 0
+            userid: 0,
+            refreshing: true,
+            page: 1
         }
 
         storage.load({
@@ -153,23 +156,46 @@ class List extends Component {
     }
 
     getList() {
-        return fetch('http://127.0.0.1:8080/posts/list?user=' + 33, {
+        return fetch('http://127.0.0.1:8080/posts/list?user=' + 33 + '&page=' + this.state.page, {
             method: 'GET'
         })
             .then((response) => response.json())
             .then((responseJson) => {
-                this.setState({
-                    list: responseJson
-                })
-            })
+                    this.setState(pre => {
+                        if (pre.page === 1) {
+                            return {
+                                list: responseJson,
+                                refreshing: false
+                            }
+                        } else {
+                            //json 拼接
+                            return {
+                                list: pre.list + responseJson,
+                                refreshing: false
+                            }
+                        }
+                    })
+                }
+            )
     }
 
     render() {
-
         return (
             <View style={styles.container}>
                 <FlatList
                     data={this.state.list}
+                    refreshing={this.state.refreshing}
+                    onRefresh={() => {
+                        this.setState({page: 1})
+                        this.getList()
+                    }}
+                    onEndReachedThreshold={0}
+                    onEndReached={(end) => {
+                        this.setState(pre => {
+                            return {page: pre.page + 1}
+                        })
+                        this.getList()
+                    }}
                     renderItem={({item}) => this._item(item, this.state.userid)}/>
             </View>
         )
